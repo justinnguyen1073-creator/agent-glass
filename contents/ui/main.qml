@@ -55,7 +55,7 @@ PlasmoidItem {
     Timer { interval: Math.max(15, Plasmoid.configuration.refreshInterval) * 1000; repeat: true; running: true; onTriggered: root.refresh() }
     Timer { interval: 15000; repeat: true; running: true; onTriggered: root.now = Date.now() }
     Component.onCompleted: refresh()
-    toolTipMainText: "Codex"
+    toolTipMainText: "Codex Glass 2"
     toolTipSubText: error || ageText()
     compactRepresentation: Item {
         implicitWidth: 74; implicitHeight: 32
