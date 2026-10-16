@@ -13,6 +13,7 @@ PlasmoidItem {
     readonly property bool panel: Plasmoid.formFactor === PlasmaCore.Types.Horizontal || Plasmoid.formFactor === PlasmaCore.Types.Vertical
     preferredRepresentation: panel ? compactRepresentation : fullRepresentation
     property var usage: ({})
+    property var spending: ({})
     property bool busy: false
     property string error: ""
     property double now: Date.now()
@@ -21,6 +22,14 @@ PlasmoidItem {
     readonly property color accent: Plasmoid.configuration.glass ? "#ffffff" : light ? "#097e6d" : "#79e6cf"
     function shellQuote(value) { return "'" + value.replace(/'/g, "'\\''") + "'" }
     readonly property string command: "/usr/bin/python3 " + shellQuote(decodeURIComponent(Qt.resolvedUrl("../code/usage.py").toString().replace("file://", ""))) + (Plasmoid.configuration.codexPath ? " --codex " + shellQuote(Plasmoid.configuration.codexPath) : "")
+    function money(value) {
+        return value === null || value === undefined ? "—" : "$" + Number(value).toLocaleString(Qt.locale(), "f", 2)
+    }
+    function compactCount(value) {
+        const n = Number(value || 0)
+        return n >= 1000000 ? (n / 1000000).toLocaleString(Qt.locale(), "f", 1) + "M" : count(n)
+    }
+    function count(value) { return Number(value || 0).toLocaleString(Qt.locale(), "f", 0) }
     function refresh() {
         if (busy) return
         busy = true
@@ -46,6 +55,7 @@ PlasmoidItem {
             root.busy = false
             try {
                 const result = JSON.parse(data.stdout)
+                if (result.spending) root.spending = result.spending
                 if (result.ok) { root.usage = result; root.error = "" }
                 else root.error = result.message || i18n("Refresh failed")
             } catch (e) { root.error = i18n("Could not start the usage helper") }
@@ -74,6 +84,24 @@ PlasmoidItem {
         Layout.minimumWidth: 300; Layout.minimumHeight: 290
         readonly property real contentScale: Math.max(0.88, Math.min(1.45, Math.min(width / 360, height / 320)))
         readonly property real padding: 24 * contentScale
+        focus: true
+        Accessible.role: Accessible.Button
+        Accessible.name: card.flipped ? i18n("Spending. Activate to show usage.") : i18n("Usage. Activate to show spending.")
+        Accessible.onPressAction: card.flipped = !card.flipped
+        Keys.onSpacePressed: card.flipped = !card.flipped
+        Keys.onReturnPressed: card.flipped = !card.flipped
+        TapHandler {
+            acceptedButtons: Qt.LeftButton
+            onTapped: function(eventPoint) {
+                // Leave the refresh/return button independent of the card tap.
+                if (eventPoint.position.x > full.width - full.padding - 40 && eventPoint.position.y < full.padding + 44) return
+                card.flipped = !card.flipped
+                full.forceActiveFocus()
+            }
+        }
+        Component {
+            id: material
+            Item {
         LiquidGlass {
             id: glassBackground
             anchors.fill: parent
@@ -101,6 +129,22 @@ PlasmoidItem {
             border.color: root.light ? "#30000000" : "#38ffffff"
             border.width: 1
         }
+            }
+        }
+        Flipable {
+            id: card
+            objectName: "usageCard"
+            anchors.fill: parent
+            property bool flipped: false
+            transform: Rotation {
+                origin.x: card.width / 2; origin.y: card.height / 2
+                axis.x: 0; axis.y: 1; axis.z: 0
+                angle: card.flipped ? 180 : 0
+                Behavior on angle { NumberAnimation { duration: 420; easing.type: Easing.InOutCubic } }
+            }
+            front: Item {
+                anchors.fill: parent
+                Loader { anchors.fill: parent; sourceComponent: material }
         ColumnLayout {
             anchors.fill: parent; anchors.margins: full.padding
             spacing: 14 * full.contentScale
@@ -114,11 +158,12 @@ PlasmoidItem {
                 Text { text: "Codex"; color: root.ink; font.pixelSize: 20 * full.contentScale; font.weight: Font.DemiBold }
                 Item { Layout.fillWidth: true }
                 Controls.ToolButton {
+                    objectName: "refreshButton"
                     icon.name: "view-refresh"; icon.color: root.ink
                     icon.width: 16 * full.contentScale; icon.height: 16 * full.contentScale
                     opacity: hovered ? 1 : 0.65
                     enabled: !root.busy
-                    onClicked: root.refresh()
+                    onClicked: { root.refresh(); full.forceActiveFocus() }
                     Controls.ToolTip.visible: hovered
                     Controls.ToolTip.text: i18n("Refresh usage")
                     Accessible.name: i18n("Refresh usage")
@@ -185,8 +230,89 @@ PlasmoidItem {
                     color: root.ink; opacity: 0.55; font.pixelSize: 10 * full.contentScale
                     elide: Text.ElideRight
                 }
+                Text { text: i18n("Tap for spending ↻"); color: root.ink; opacity: 0.55; font.pixelSize: 10 * full.contentScale }
             }
             Text { Layout.fillWidth: true; visible: root.error !== ""; text: root.error; color: root.ink; font.pixelSize: 11 * full.contentScale; wrapMode: Text.WordWrap }
+        }
+            }
+            back: Item {
+                anchors.fill: parent
+                Loader { anchors.fill: parent; sourceComponent: material }
+                ColumnLayout {
+                    anchors.fill: parent; anchors.margins: full.padding
+                    spacing: 6 * full.contentScale
+                    RowLayout {
+                        Text { text: i18n("Spending"); color: root.ink; font.pixelSize: 20 * full.contentScale; font.weight: Font.DemiBold }
+                        Item { Layout.fillWidth: true }
+                        Controls.ToolButton {
+                            objectName: "returnButton"
+                            icon.name: "go-previous"; icon.color: root.ink; opacity: hovered ? 1 : 0.65
+                            onClicked: { card.flipped = false; full.forceActiveFocus() }
+                            Accessible.name: i18n("Back to usage")
+                            background: Rectangle { radius: width / 2; color: root.ink; opacity: parent.hovered ? 0.1 : 0 }
+                        }
+                    }
+                    Text { text: i18n("List-price estimate · USD"); color: root.ink; opacity: 0.65; font.pixelSize: 11 * full.contentScale
+                        HoverHandler { id: basisHover }
+                        Controls.ToolTip.visible: basisHover.hovered
+                        Controls.ToolTip.text: root.spending.basis || "" }
+                    Row {
+                        id: spendingTotals
+                        Layout.fillWidth: true
+                        spacing: 16
+                        Repeater {
+                            model: [{label: i18n("Today"), value: root.spending.todayUsd}, {label: i18n("Last 30 days"), value: root.spending.monthUsd}]
+                            delegate: Column {
+                                required property var modelData
+                                width: (spendingTotals.width - spendingTotals.spacing) / 2
+                                spacing: 2
+                                Text { text: modelData.label; color: root.ink; opacity: 0.65; font.pixelSize: 12 * full.contentScale }
+                                Text { text: root.money(modelData.value); color: root.ink; font.pixelSize: 26 * full.contentScale; font.weight: Font.Light }
+                            }
+                        }
+                    }
+                    Text { text: i18n("%1 tokens · local history", root.compactCount(root.spending.tokens)); color: root.ink; opacity: 0.65; font.pixelSize: 11 * full.contentScale
+                        HoverHandler { id: tokensHover }
+                        Controls.ToolTip.visible: tokensHover.hovered
+                        Controls.ToolTip.text: i18n("Input %1 · cached %2 · output %3", root.count(root.spending.input), root.count(root.spending.cached), root.count(root.spending.output))
+                    }
+                    Row {
+                        id: chart
+                        Layout.fillWidth: true; Layout.fillHeight: true; Layout.minimumHeight: 40 * full.contentScale
+                        spacing: 3
+                        readonly property var days: root.spending.days || []
+                        readonly property real maximum: Math.max(0.01, ...days.map(day => day.usd))
+                        Repeater {
+                            model: chart.days
+                            delegate: Item {
+                                required property var modelData
+                                width: Math.max(1, (chart.width - (chart.days.length - 1) * chart.spacing) / Math.max(1, chart.days.length))
+                                height: chart.height
+                                Rectangle {
+                                    anchors.bottom: parent.bottom; width: parent.width; radius: Math.min(2, width / 2)
+                                    height: modelData.usd > 0 ? Math.max(2, parent.height * modelData.usd / chart.maximum) : 1
+                                    color: root.accent; opacity: modelData.usd > 0 ? 0.85 : 0.15
+                                }
+                                HoverHandler { id: barHover }
+                                Controls.ToolTip.visible: barHover.hovered
+                                Controls.ToolTip.text: modelData.date + " · " + root.money(modelData.usd)
+                            }
+                        }
+                    }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Text { text: chart.days.length ? chart.days[0].date.slice(5) : ""; color: root.ink; opacity: 0.5; font.pixelSize: 9 * full.contentScale }
+                        Item { Layout.fillWidth: true }
+                        Text { text: chart.days.length ? chart.days[chart.days.length-1].date.slice(5) : ""; color: root.ink; opacity: 0.5; font.pixelSize: 9 * full.contentScale }
+                    }
+                    Text {
+                        Layout.fillWidth: true
+                        text: !root.spending.ok ? i18n("Local spending history unavailable") : !root.spending.tokens ? i18n("No recorded token history") : root.spending.incomplete ? i18n("Priced portion only · %1 unpriced tokens", root.compactCount(root.spending.unpricedTokens)) : i18n("Base token rates · not your bill")
+                        color: root.ink; opacity: 0.65; font.pixelSize: 10 * full.contentScale; wrapMode: Text.WordWrap
+                    }
+                    Text { text: i18n("Tap to return to usage ↻"); color: root.ink; opacity: 0.5; font.pixelSize: 10 * full.contentScale }
+                }
+            }
         }
     }
 }

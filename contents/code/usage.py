@@ -12,6 +12,7 @@ import shutil
 import signal
 import subprocess
 import time
+from spending import summarize
 
 TIMEOUT = 40
 
@@ -132,7 +133,7 @@ def read_limits(command, timeout=TIMEOUT):
 
     try:
         send({'id': 1, 'method': 'initialize', 'params': {
-            'clientInfo': {'name': 'codex_glass', 'title': 'Codex Glass', 'version': '1.1.0'}}})
+            'clientInfo': {'name': 'codex_glass', 'title': 'Codex Glass', 'version': '2.1.0'}}})
         receive(1)
         send({'method': 'initialized', 'params': {}})
         send({'id': 2, 'method': 'account/rateLimits/read'})
@@ -180,4 +181,9 @@ def main(configured=''):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--codex', default='', help='Absolute path to an existing Codex executable')
-    print(json.dumps(main(parser.parse_args().codex), allow_nan=False))
+    result = main(parser.parse_args().codex)
+    try:
+        result['spending'] = summarize()
+    except (OSError, ValueError, TypeError):
+        result['spending'] = {'ok': False}
+    print(json.dumps(result, allow_nan=False))

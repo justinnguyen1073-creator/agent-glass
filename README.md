@@ -50,6 +50,16 @@ Right-click → **Configure Codex Glass** to choose:
 
 Auto-detection checks PATH, common user installation locations, and nvm installations. For npm/nvm installs it uses the matching Node executable when available, so Plasma does not need to load your shell configuration. A Codex desktop installation with a bundled CLI can use that executable through the path setting; the graphical desktop launcher itself is not an app-server executable.
 
+## Flip to spending
+
+Tap the expanded widget to flip it over; tap again or use the back arrow to return to usage. Space/Return work when the card has focus. The refresh button refreshes without flipping. Panel users first click the compact indicator to expand the widget.
+
+The back shows today's and the last 30 local calendar days' **list-price estimate in USD**, token totals, and a daily cost chart. Hover a bar for its date/value, the token total for input/cache/output details, or the estimate subtitle for the calculation basis.
+
+Spending is calculated locally from `CODEX_HOME/sessions` and `archived_sessions` (default `~/.codex`). Cumulative token deltas avoid counting repeated notifications twice; session IDs deduplicate copied/archived logs. Cached input is discounted and reasoning output is already included in output tokens. Calendar buckets use the desktop's local timezone. No prompts, tool results, session IDs, file paths, or model identifiers are returned to QML or sent anywhere.
+
+These are **base token-cost estimates, not subscription charges or an invoice**. They cover only available local history and exclude tool charges, fast-mode/long-context premiums, and unknown model prices. Unknown pricing is explicitly labeled as an unpriced token count and the dollar total as the priced portion. No-history/no-priced-usage states display a dash instead of inventing costs. Prices are a bundled snapshot verified on 2026-10-15 from [OpenAI's pricing page](https://developers.openai.com/api/docs/pricing) and the [GPT-5.5 model page](https://developers.openai.com/api/docs/models/gpt-5.5); updating the widget updates that snapshot. No CodexBar dependency was added.
+
 ## Update, package, or remove
 
 To update an existing source installation:
@@ -100,6 +110,7 @@ Run the account-independent tests:
 
 ```sh
 python3 tests/test_usage.py
+python3 tests/test_spending.py
 ```
 
 Tests cover parsing, bucket selection, missing windows, invalid percentages/reset dates, authentication/network errors, executable discovery, privacy, and the real stdio transport with a simulated server (handshake, notifications, fragmented messages, unexpected requests, EOF, and timeout cleanup).
