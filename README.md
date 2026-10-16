@@ -37,7 +37,8 @@ Right-click the desktop or enter panel edit mode, choose **Add Widgets**, search
 Right-click → **Configure Codex Glass** to choose:
 
 - Refresh interval: default 60 seconds, configurable from 15 to 3600 seconds.
-- Appearance: follow system, dark, or light; glass or solid background.
+- Appearance: glass or solid background. Glass matches the Liquid Glass widgets with white lettering, wallpaper-driven color, and a default 10% tint. Solid mode supports follow-system, dark, or light appearance.
+- Glass controls: corner radius, roundness, tint opacity, blur, refraction thickness/index/strength, chromatic aberration, reflections, and optional animated-wallpaper capture.
 - Bar values: usage consumed or allowance remaining. Both percentages remain explicitly labeled in the full view; the panel percentage follows this setting and represents the 5-hour window.
 - Codex executable: leave blank for auto-detection, or provide the absolute path to your existing Codex CLI/app-server executable.
 
