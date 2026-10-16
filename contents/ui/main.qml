@@ -19,7 +19,8 @@ PlasmoidItem {
     readonly property bool light: Plasmoid.configuration.appearance === 2 || (Plasmoid.configuration.appearance === 0 && Kirigami.Theme.backgroundColor.hslLightness > 0.5)
     readonly property color ink: light ? "#182431" : "#f0f5fa"
     readonly property color accent: light ? "#097e6d" : "#79e6cf"
-    readonly property string command: "/usr/bin/python3 '" + decodeURIComponent(Qt.resolvedUrl("../code/usage.py").toString().replace("file://", "")).replace(/'/g, "'\\''") + "'"
+    function shellQuote(value) { return "'" + value.replace(/'/g, "'\\''") + "'" }
+    readonly property string command: "/usr/bin/python3 " + shellQuote(decodeURIComponent(Qt.resolvedUrl("../code/usage.py").toString().replace("file://", ""))) + (Plasmoid.configuration.codexPath ? " --codex " + shellQuote(Plasmoid.configuration.codexPath) : "")
     function refresh() {
         if (busy) return
         busy = true

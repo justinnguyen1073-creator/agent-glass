@@ -1,6 +1,8 @@
 # Codex Glass — Plasma 6
 
-A native desktop/panel plasmoid for Codex account usage. It uses your existing CodexBar login; it does not read, store, or ask for credentials. No paid API is needed.
+A native KDE Plasma widget for your Codex account's 5-hour and weekly usage, with Liquid Glass styling and desktop/panel support.
+
+**No CodexBar required.** The widget uses your existing Codex installation and ChatGPT sign-in. It does not ask for credentials or require a paid API key.
 
 ## Installation
 
@@ -8,25 +10,17 @@ A native desktop/panel plasmoid for Codex account usage. It uses your existing C
 
 - KDE Plasma 6 on Linux (tested with Plasma 6.7.5 on Fedora KDE Wayland).
 - Python 3 and KDE's Plasma5Support executable data engine.
-- A working [CodexBar Linux CLI](https://github.com/steipete/CodexBar/blob/main/docs/cli.md), authenticated with your existing Codex account.
+- An existing Codex installation that supports `codex app-server`, signed in with your ChatGPT account. API-key-only authentication does not provide these subscription usage limits.
 
-On Fedora, install the widget dependencies if needed:
+On Fedora, install the desktop dependencies if needed:
 
 ```sh
 sudo dnf install git python3 plasma-workspace plasma5support
 ```
 
-Download the appropriate Linux CLI tarball from [CodexBar releases](https://github.com/steipete/CodexBar/releases) and follow its [CLI installation guide](https://github.com/steipete/CodexBar/blob/main/docs/cli.md). Keep the extracted resource bundle beside the executable. Put `codexbar` in PATH or symlink it to `~/.local/bin/codexbar`. The widget does not install CodexBar or manage your login.
+If you already use Codex, keep your existing installation and sign-in. No separate usage tracker or additional login is needed. If Codex itself is missing, follow [OpenAI's Codex CLI instructions](https://developers.openai.com/codex/cli).
 
-Verify your existing login works before installing:
-
-```sh
-codexbar --provider codex --format json
-```
-
-This diagnostic can contain your account email; do not share its raw output publicly.
-
-### Install from source
+### Install the widget
 
 ```sh
 git clone https://github.com/justinnguyen1073-creator/codex-glass.git
@@ -36,11 +30,18 @@ cd codex-glass
 
 The installer registers only `org.local.codexglass` in your personal Plasma widget directory. It does not edit panels, change desktop configuration, modify other widgets, or restart Plasma.
 
-### Add to your desktop or panel
+Right-click the desktop or enter panel edit mode, choose **Add Widgets**, search **Codex Glass**, and drag it into place. In a panel, click the compact indicator to open the full view.
 
- Right-click the desktop or enter panel edit mode, choose **Add Widgets**, search **Codex Glass**, and drag it into place. In a panel, click the compact usage indicator to open the full view.
+### Configure
 
-Right-click → **Configure Codex Glass** to choose a refresh interval (default 60 seconds), automatic/dark/light appearance, glass or solid background, and used or remaining bar values. Both percentages remain explicitly labeled. The panel percentage follows this setting and represents the 5-hour window.
+Right-click → **Configure Codex Glass** to choose:
+
+- Refresh interval: default 60 seconds, configurable from 15 to 3600 seconds.
+- Appearance: follow system, dark, or light; glass or solid background.
+- Bar values: usage consumed or allowance remaining. Both percentages remain explicitly labeled in the full view; the panel percentage follows this setting and represents the 5-hour window.
+- Codex executable: leave blank for auto-detection, or provide the absolute path to your existing Codex CLI/app-server executable.
+
+Auto-detection checks PATH, common user installation locations, and nvm installations. For npm/nvm installs it uses the matching Node executable when available, so Plasma does not need to load your shell configuration. A Codex desktop installation with a bundled CLI can use that executable through the path setting; the graphical desktop launcher itself is not an app-server executable.
 
 ## Update, package, or remove
 
@@ -53,37 +54,53 @@ git pull --ff-only
 
 Remove and re-add an existing widget instance if Plasma still displays its previous code; the installer does not restart your session.
 
-To build an installable archive:
+To build an installable archive using Python's standard library:
 
 ```sh
 python3 build-package.py
 ```
 
-In Plasma, use Add Widgets → Get New Widgets → Install Widget From Local File and select `dist/codex-glass.plasmoid`. The build uses only Python's standard library.
+In Plasma, use Add Widgets → Get New Widgets → Install Widget From Local File and select `dist/codex-glass.plasmoid`.
 
-Remove instances using Plasma's normal edit mode. Uninstall the package with `kpackagetool6 --type Plasma/Applet --remove org.local.codexglass`. No Plasma restart or panel configuration edit is needed.
+Remove instances using Plasma's edit mode. To uninstall the package:
+
+```sh
+kpackagetool6 --type Plasma/Applet --remove org.local.codexglass
+```
 
 ## Data and privacy
 
-The small Python 3 helper calls the installed `codexbar --provider codex --format json`, with a 40-second timeout. It searches PATH and `~/.local/bin/codexbar`. The command and actual live JSON were verified with the locally installed CodexBar. It reads the provider array's `usage.primary`, `secondary`, and `tertiary`, selecting `windowMinutes: 300` and `10080`, with `usedPercent` and ISO `resetsAt`. It never assumes the primary window is always the 5-hour window. Missing or invalid limits are **Unavailable**.
+The small Python helper opens a private stdio connection to `codex app-server --listen stdio://`. After the initialization handshake, it calls only `account/rateLimits/read`, then terminates its own server process group. It never starts a conversation, sends a model prompt, or redeems reset credits. The entire request has a 40-second deadline.
 
-Only sanitized limits and the source timestamp reach QML; account email, identity, credits, credentials, and raw diagnostic output are discarded. No usage data is written to disk. Failed refreshes preserve the last successful values in memory and mark them stale. Reset dates use the desktop's local timezone, including its timezone label.
+This uses the [documented Codex app-server interface](https://developers.openai.com/codex/app-server). The verified response contains `rateLimitsByLimitId.codex` (preferred) or the legacy `rateLimits`. The helper selects `primary`/`secondary` windows by `windowDurationMins: 300` and `10080`, reads `usedPercent`, and converts Unix `resetsAt` timestamps to ISO dates. It never assumes primary always means five hours or substitutes another model's limit bucket. A missing or invalid matching window is **Unavailable**, distinct from 0% used.
+
+Codex manages its existing authentication; the helper never reads token files or asks for passwords. Only sanitized usage values and a successful retrieval timestamp reach QML. Account IDs, identity, credits, credentials, and raw diagnostics are discarded. The widget does not persist usage data; Codex retains control of its own normal caches/logs. Failed refreshes preserve the last successful values in memory and mark them stale. Reset dates use the desktop's local timezone, including its timezone label.
 
 ## Troubleshooting
 
-- **Missing CodexBar:** place the CLI in PATH or `~/.local/bin`.
-- **Authentication expired:** sign in through your existing Codex/CodexBar workflow, then click refresh. The widget never requests passwords or tokens.
-- **Offline / timeout / stale:** check connectivity and run `codexbar --provider codex --format json` yourself. This command may print account details, so do not post its raw output publicly.
-- **Unavailable:** CodexBar did not report a valid matching window. This is distinct from 0% used.
-- **No desktop frost:** the wallpaper shader requires Plasma's wallpaper containment. Panels and standalone viewers use the translucent fallback; panel popups also benefit from the Plasma theme/compositor background. Unsupported wallpaper renderers may also fall back. Solid mode improves contrast independently of the wallpaper.
-- Requires Plasma 6, Python 3, CodexBar, and KDE's Plasma5Support executable data engine. The latter is shipped on this Fedora installation; this uses the KDE Plasma 6 compatibility API documented at https://develop.kde.org/docs/plasma/widget/porting_kf6/.
+- **Codex not found:** select the absolute path to your existing Codex executable in widget settings. A terminal can locate it with `command -v codex`.
+- **Sign-in error:** sign in to Codex using your ChatGPT account through your normal Codex workflow, then refresh. API-key-only login cannot provide these account limits.
+- **Unsupported usage method:** update your Codex installation to a version supporting `account/rateLimits/read`.
+- **Offline / timeout / stale:** check connectivity and retry. For sanitized diagnostics, run `python3 contents/code/usage.py` from this repository; optionally add `--codex /absolute/path/to/codex`.
+- **Unavailable:** the account did not report a valid window matching that duration. The widget does not fabricate missing values.
+- **No desktop frost:** wallpaper refraction requires Plasma's wallpaper containment. Panels and standalone viewers use a translucent fallback. Unsupported wallpaper renderers may also fall back. Solid mode improves contrast independently of the wallpaper.
+
+The widget uses KDE's [Plasma 6 compatibility DataSource API](https://develop.kde.org/docs/plasma/widget/porting_kf6/) to invoke its fixed local helper.
 
 ## Verification
 
-Live CodexBar retrieval and sanitized helper output passed. Parser tests cover window selection, missing windows, invalid percentages, authentication/network errors, timeout, missing tools, and privacy. Run `python3 tests/test_usage.py` from this directory. QML components compile with the installed Qt 6 engine. A standalone rendering harness is used for layout/data connection validation; actual desktop wallpaper refraction must be checked after adding the widget to a containment.
+Run the account-independent tests:
+
+```sh
+python3 tests/test_usage.py
+```
+
+Tests cover parsing, bucket selection, missing windows, invalid percentages/reset dates, authentication/network errors, executable discovery, privacy, and the real stdio transport with a simulated server (handshake, notifications, fragmented messages, unexpected requests, EOF, and timeout cleanup).
+
+Live direct Codex retrieval has been verified with Codex CLI 0.163.0. QML compilation and standalone rendering/data connection checks cover the widget views; actual desktop wallpaper refraction must be checked after adding the widget to a containment.
 
 ## Attribution and license
 
-GPL-3.0-or-later; see LICENSE. The unmodified `contents/ui/components/LiquidGlass.qml` and shader sources/binaries are from Jaxparrow07's locally installed **liquidglass-kde-widgets** project, https://github.com/jaxparrow07/liquidglass-kde-widgets. They are vendored copies for this separate package, with no changes to the original project or installed widgets. All corresponding shader sources are included.
+GPL-3.0-or-later; see [LICENSE](LICENSE). The unmodified `contents/ui/components/LiquidGlass.qml` and shader sources/binaries are from Jaxparrow07's [liquidglass-kde-widgets](https://github.com/jaxparrow07/liquidglass-kde-widgets) project. They are vendored copies for this separate package, with no changes to the original project or installed widgets. All corresponding shader sources are included.
 
 This is an independent community widget, unaffiliated with OpenAI or KDE.
