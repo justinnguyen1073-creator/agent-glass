@@ -346,7 +346,7 @@ PlasmoidItem {
                     }
                     Text {
                         Layout.fillWidth: true
-                        text: !root.spending.ok ? i18n("Local spending history unavailable") : !root.spending.tokens ? i18n("No recorded token history") : root.spending.incomplete ? i18n("Priced portion only · %1 unpriced tokens", full.tokenText(root.spending.unpricedTokens)) : i18n("Base token rates · not your bill")
+                        text: !root.spending.ok ? i18n("Local spending history unavailable") : !root.spending.tokens ? i18n("No recorded token history") : root.spending.incomplete ? i18n("Priced portion only · %1 unpriced tokens", full.tokenText(root.spending.unpricedTokens)) : i18n("API-equivalent estimate · not your bill")
                         color: root.ink; opacity: 0.65; font.pixelSize: 10 * spendingFace.textScale; wrapMode: Text.WordWrap
                     }
                     Text {
