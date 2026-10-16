@@ -27,9 +27,12 @@ PlasmoidItem {
     }
     function compactCount(value) {
         const n = Number(value || 0)
-        return n >= 1000000 ? (n / 1000000).toLocaleString(Qt.locale(), "f", 1) + "M" : count(n)
+        return n >= 1000000000 ? (n / 1000000000).toLocaleString(Qt.locale(), "f", 1) + "B" : n >= 1000000 ? (n / 1000000).toLocaleString(Qt.locale(), "f", 1) + "M" : count(n)
     }
-    function count(value) { return Number(value || 0).toLocaleString(Qt.locale(), "f", 0) }
+    function count(value) {
+        const locale = Qt.locale()
+        return Number(value || 0).toLocaleString(locale.name === "C" ? Qt.locale("en_US") : locale, "f", 0)
+    }
     function refresh() {
         if (busy) return
         busy = true
@@ -80,10 +83,14 @@ PlasmoidItem {
     }
     fullRepresentation: Item {
         id: full
+        objectName: "usageFullView"
         implicitWidth: 360; implicitHeight: 320
         Layout.minimumWidth: 300; Layout.minimumHeight: 290
         readonly property real contentScale: Math.max(0.88, Math.min(1.45, Math.min(width / 360, height / 320)))
         readonly property real padding: 24 * contentScale
+        readonly property bool exactTokens: width >= 440
+        readonly property bool showDetails: (width >= 440 && height >= 480) || (width >= 700 && height >= 400)
+        function tokenText(value) { return exactTokens ? root.count(value) : root.compactCount(value) }
         focus: true
         Accessible.role: Accessible.Button
         Accessible.name: card.flipped ? i18n("Spending. Activate to show usage.") : i18n("Usage. Activate to show spending.")
@@ -236,13 +243,15 @@ PlasmoidItem {
         }
             }
             back: Item {
+                id: spendingFace
+                readonly property real textScale: Math.min(full.contentScale, 1.15)
                 anchors.fill: parent
                 Loader { anchors.fill: parent; sourceComponent: material }
                 ColumnLayout {
                     anchors.fill: parent; anchors.margins: full.padding
-                    spacing: 6 * full.contentScale
+                    spacing: 6 * spendingFace.textScale
                     RowLayout {
-                        Text { text: i18n("Spending"); color: root.ink; font.pixelSize: 20 * full.contentScale; font.weight: Font.DemiBold }
+                        Text { text: i18n("Spending"); color: root.ink; font.pixelSize: 20 * spendingFace.textScale; font.weight: Font.DemiBold }
                         Item { Layout.fillWidth: true }
                         Controls.ToolButton {
                             objectName: "returnButton"
@@ -252,7 +261,7 @@ PlasmoidItem {
                             background: Rectangle { radius: width / 2; color: root.ink; opacity: parent.hovered ? 0.1 : 0 }
                         }
                     }
-                    Text { text: i18n("List-price estimate · USD"); color: root.ink; opacity: 0.65; font.pixelSize: 11 * full.contentScale
+                    Text { text: i18n("List-price estimate · USD"); color: root.ink; opacity: 0.65; font.pixelSize: 11 * spendingFace.textScale
                         HoverHandler { id: basisHover }
                         Controls.ToolTip.visible: basisHover.hovered
                         Controls.ToolTip.text: root.spending.basis || "" }
@@ -266,19 +275,49 @@ PlasmoidItem {
                                 required property var modelData
                                 width: (spendingTotals.width - spendingTotals.spacing) / 2
                                 spacing: 2
-                                Text { text: modelData.label; color: root.ink; opacity: 0.65; font.pixelSize: 12 * full.contentScale }
-                                Text { text: root.money(modelData.value); color: root.ink; font.pixelSize: 26 * full.contentScale; font.weight: Font.Light }
+                                Text { text: modelData.label; color: root.ink; opacity: 0.65; font.pixelSize: 12 * spendingFace.textScale }
+                                Text { text: root.money(modelData.value); color: root.ink; font.pixelSize: 26 * spendingFace.textScale; font.weight: Font.Light }
                             }
                         }
                     }
-                    Text { text: i18n("%1 tokens · local history", root.compactCount(root.spending.tokens)); color: root.ink; opacity: 0.65; font.pixelSize: 11 * full.contentScale
+                    Text { objectName: "tokenSummary"; text: i18n("%1 tokens · local history", full.tokenText(root.spending.tokens)); color: root.ink; opacity: 0.65; font.pixelSize: 11 * spendingFace.textScale
                         HoverHandler { id: tokensHover }
                         Controls.ToolTip.visible: tokensHover.hovered
                         Controls.ToolTip.text: i18n("Input %1 · cached %2 · output %3", root.count(root.spending.input), root.count(root.spending.cached), root.count(root.spending.output))
                     }
+                    GridLayout {
+                        id: spendingGrid
+                        objectName: "spendingDetails"
+                        visible: full.showDetails
+                        Layout.fillWidth: true
+                        columns: full.width >= 700 ? 4 : 2
+                        columnSpacing: 14 * spendingFace.textScale
+                        rowSpacing: 10 * spendingFace.textScale
+                        Repeater {
+                            model: [{label: i18n("Input · includes cache"), value: root.spending.input},
+                                    {label: i18n("Cached input"), value: root.spending.cached},
+                                    {label: i18n("Output"), value: root.spending.output},
+                                    {label: i18n("Unpriced tokens"), value: root.spending.unpricedTokens}]
+                            delegate: Column {
+                                required property var modelData
+                                Layout.fillWidth: true
+                                Layout.preferredWidth: (spendingGrid.width - spendingGrid.columnSpacing * (spendingGrid.columns-1)) / spendingGrid.columns
+                                spacing: 3
+                                Text { text: modelData.label; color: root.ink; opacity: 0.55; font.pixelSize: 10 * spendingFace.textScale }
+                                Text { text: root.count(modelData.value); color: root.ink; font.pixelSize: 13 * spendingFace.textScale; font.weight: Font.Medium }
+                            }
+                        }
+                    }
+                    RowLayout {
+                        visible: full.showDetails
+                        Layout.fillWidth: true
+                        Text { text: i18n("Daily estimated cost · USD"); color: root.ink; opacity: 0.6; font.pixelSize: 10 * spendingFace.textScale }
+                        Item { Layout.fillWidth: true }
+                        Text { text: root.money(Math.max(0, ...chart.days.map(day => day.usd))); color: root.ink; opacity: 0.6; font.pixelSize: 10 * spendingFace.textScale }
+                    }
                     Row {
                         id: chart
-                        Layout.fillWidth: true; Layout.fillHeight: true; Layout.minimumHeight: 40 * full.contentScale
+                        Layout.fillWidth: true; Layout.fillHeight: true; Layout.minimumHeight: 40 * spendingFace.textScale
                         spacing: 3
                         readonly property var days: root.spending.days || []
                         readonly property real maximum: Math.max(0.01, ...days.map(day => day.usd))
@@ -301,16 +340,22 @@ PlasmoidItem {
                     }
                     RowLayout {
                         Layout.fillWidth: true
-                        Text { text: chart.days.length ? chart.days[0].date.slice(5) : ""; color: root.ink; opacity: 0.5; font.pixelSize: 9 * full.contentScale }
+                        Text { text: chart.days.length ? (full.showDetails ? chart.days[0].date : chart.days[0].date.slice(5)) : ""; color: root.ink; opacity: 0.5; font.pixelSize: 9 * spendingFace.textScale }
                         Item { Layout.fillWidth: true }
-                        Text { text: chart.days.length ? chart.days[chart.days.length-1].date.slice(5) : ""; color: root.ink; opacity: 0.5; font.pixelSize: 9 * full.contentScale }
+                        Text { text: chart.days.length ? (full.showDetails ? chart.days[chart.days.length-1].date : chart.days[chart.days.length-1].date.slice(5)) : ""; color: root.ink; opacity: 0.5; font.pixelSize: 9 * spendingFace.textScale }
                     }
                     Text {
                         Layout.fillWidth: true
-                        text: !root.spending.ok ? i18n("Local spending history unavailable") : !root.spending.tokens ? i18n("No recorded token history") : root.spending.incomplete ? i18n("Priced portion only · %1 unpriced tokens", root.compactCount(root.spending.unpricedTokens)) : i18n("Base token rates · not your bill")
-                        color: root.ink; opacity: 0.65; font.pixelSize: 10 * full.contentScale; wrapMode: Text.WordWrap
+                        text: !root.spending.ok ? i18n("Local spending history unavailable") : !root.spending.tokens ? i18n("No recorded token history") : root.spending.incomplete ? i18n("Priced portion only · %1 unpriced tokens", full.tokenText(root.spending.unpricedTokens)) : i18n("Base token rates · not your bill")
+                        color: root.ink; opacity: 0.65; font.pixelSize: 10 * spendingFace.textScale; wrapMode: Text.WordWrap
                     }
-                    Text { text: i18n("Tap to return to usage ↻"); color: root.ink; opacity: 0.5; font.pixelSize: 10 * full.contentScale }
+                    Text {
+                        visible: full.showDetails && full.height >= 520
+                        Layout.fillWidth: true
+                        text: i18n("Hypothetical API token cost · pricing snapshot %1", root.spending.pricingDate || "—") + "\n" + (root.spending.basis || "")
+                        color: root.ink; opacity: 0.5; font.pixelSize: 10 * spendingFace.textScale; wrapMode: Text.WordWrap
+                    }
+                    Text { objectName: "spendingHint"; text: i18n("Tap to return to usage ↻"); color: root.ink; opacity: 0.5; font.pixelSize: 10 * spendingFace.textScale }
                 }
             }
         }

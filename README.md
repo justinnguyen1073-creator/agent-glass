@@ -54,6 +54,8 @@ Auto-detection checks PATH, common user installation locations, and nvm installa
 
 Tap the expanded widget to flip it over; tap again or use the back arrow to return to usage. Space/Return work when the card has focus. The refresh button refreshes without flipping. Panel users first click the compact indicator to expand the widget.
 
+At widths of 440 px or more, token totals switch from M/B abbreviations to full locale-formatted counts. At 440×480 px (or a wide 700×400 px layout), input/cache/output/unpriced counts and chart details appear. Taller views also show the pricing snapshot and scope. Compact views keep those details in tooltips.
+
 The back shows today's and the last 30 local calendar days' **list-price estimate in USD**, token totals, and a daily cost chart. Hover a bar for its date/value, the token total for input/cache/output details, or the estimate subtitle for the calculation basis.
 
 Spending is calculated locally from `CODEX_HOME/sessions` and `archived_sessions` (default `~/.codex`). Cumulative token deltas avoid counting repeated notifications twice; session IDs deduplicate copied/archived logs. Cached input is discounted and reasoning output is already included in output tokens. Calendar buckets use the desktop's local timezone. No prompts, tool results, session IDs, file paths, or model identifiers are returned to QML or sent anywhere.
