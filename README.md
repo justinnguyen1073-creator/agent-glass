@@ -1,4 +1,4 @@
-# Codex Glass 2 — Plasma 6
+# Codex Glass — Plasma 6
 
 A native KDE Plasma widget for your Codex account's 5-hour and weekly usage, with Liquid Glass styling and desktop/panel support.
 
@@ -30,17 +30,17 @@ cd codex-glass
 
 The installer registers only `org.local.codexglass2` in your personal Plasma widget directory. It does not edit panels, change desktop configuration, modify other widgets, or restart Plasma.
 
-Right-click the desktop or enter panel edit mode, choose **Add Widgets**, search **Codex Glass 2**, and drag it into place. In a panel, click the compact indicator to open the full view.
+Right-click the desktop or enter panel edit mode, choose **Add Widgets**, search **Codex Glass**, and drag it into place. In a panel, click the compact indicator to open the full view.
 
 ### Upgrading from the original Codex Glass
 
-**Add the new widget named “Codex Glass 2”.** It has a new package ID (`org.local.codexglass2`) so Plasma loads the redesigned QML from a fresh path. In a long-running Plasma session, upgrading the original package on disk can leave its old QML component cached, even when its settings page is updated. Removing and re-adding the original name may still reuse that cached component.
+**Add the new widget named “Codex Glass”.** It has a new package ID (`org.local.codexglass2`) so Plasma loads the redesigned QML from a fresh path. In a long-running Plasma session, upgrading the original package on disk can leave its old QML component cached, even when its settings page is updated. Removing and re-adding the original name may still reuse that cached component.
 
-The installer deliberately leaves the old widget and its placement intact. Once you have added Codex Glass 2, remove the old instance through desktop edit mode. The new widget starts with fresh settings; no Plasma restart or manual desktop configuration edit is required.
+The installer deliberately leaves the old widget and its placement intact. Once you have added Codex Glass, remove the old instance through desktop edit mode. The new widget starts with fresh settings; no Plasma restart or manual desktop configuration edit is required.
 
 ### Configure
 
-Right-click → **Configure Codex Glass 2** to choose:
+Right-click → **Configure Codex Glass** to choose:
 
 - Refresh interval: default 60 seconds, configurable from 15 to 3600 seconds.
 - Appearance: glass or solid background. Glass matches the Liquid Glass widgets with white lettering, wallpaper-driven color, and a default 10% tint. Solid mode supports follow-system, dark, or light appearance.
@@ -59,7 +59,7 @@ git pull --ff-only
 ./install.sh
 ```
 
-For the original-to-v2 migration, add **Codex Glass 2** as described above. Future updates within the same package ID can still be affected by Plasma's in-memory QML cache; the installer never restarts your session automatically.
+For the original-to-v2 migration, add **Codex Glass** as described above. Future updates within the same package ID can still be affected by Plasma's in-memory QML cache; the installer never restarts your session automatically.
 
 To build an installable archive using Python's standard library:
 
