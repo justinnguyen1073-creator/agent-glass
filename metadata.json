@@ -4,7 +4,7 @@
     "Id": "org.local.codexglass2",
     "Name": "Codex Glass",
     "Description": "Codex usage in a liquid glass dashboard",
-    "Version": "2.0.1",
+    "Version": "2.0.2",
     "License": "GPL-3.0-or-later",
     "Icon": "utilities-terminal",
     "Authors": [

@@ -94,7 +94,8 @@ PlasmoidItem {
         }
         Rectangle {
             anchors.fill: parent
-            visible: !glassBackground.active || !Plasmoid.configuration.glass
+            // The shader owns the solid/glass silhouette; only border the rectangle fallback.
+            visible: Plasmoid.configuration.glass && !glassBackground.active
             radius: glassBackground.radius
             color: "transparent"
             border.color: root.light ? "#30000000" : "#38ffffff"
