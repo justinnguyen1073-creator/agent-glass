@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 """Read account limits through Codex's local app-server, without reading tokens."""
 import argparse
+import concurrent.futures
 import datetime as dt
 import json
 import math
@@ -13,6 +14,7 @@ import signal
 import subprocess
 import time
 from spending import summarize
+import claude_usage
 
 TIMEOUT = 40
 
@@ -181,7 +183,13 @@ def main(configured=''):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--codex', default='', help='Absolute path to an existing Codex executable')
-    result = main(parser.parse_args().codex)
+    with concurrent.futures.ThreadPoolExecutor(1) as pool:
+        claude = pool.submit(claude_usage.main)
+        result = main(parser.parse_args().codex)
+        try:
+            result['claude'] = claude.result()
+        except Exception:
+            result['claude'] = {'ok': False, 'message': 'Could not read Claude usage.', 'spending': {'ok': False}}
     try:
         result['spending'] = summarize()
     except (OSError, ValueError, TypeError):

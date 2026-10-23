@@ -14,6 +14,24 @@ PlasmoidItem {
     preferredRepresentation: panel ? compactRepresentation : fullRepresentation
     property var usage: ({})
     property var spending: ({})
+    property var claude: ({})
+    property string claudeError: ""
+    readonly property color claudeAccent: Plasmoid.configuration.glass ? "#ffd2b8" : light ? "#b4542f" : "#f0a07a"
+    // Both agents' local history, merged per day; null totals stay null only if neither priced anything.
+    readonly property var claudeSpending: claude.spending || ({})
+    readonly property var combined: {
+        const a = spending, b = claudeSpending
+        const sum = (x, y) => (x === null || x === undefined) && (y === null || y === undefined) ? null : Number(x || 0) + Number(y || 0)
+        const days = (a.days || b.days || []).map(day => {
+            const mine = (a.days || []).find(d => d.date === day.date) || {usd: 0, tokens: 0}
+            const other = (b.days || []).find(d => d.date === day.date) || {usd: 0, tokens: 0}
+            return {date: day.date, usd: mine.usd + other.usd, codex: mine.usd, claude: other.usd, tokens: mine.tokens + other.tokens}
+        })
+        return {ok: a.ok || b.ok, todayUsd: sum(a.todayUsd, b.todayUsd), monthUsd: sum(a.monthUsd, b.monthUsd),
+                tokens: sum(a.tokens, b.tokens) || 0, input: sum(a.input, b.input) || 0, cached: sum(a.cached, b.cached) || 0,
+                output: sum(a.output, b.output) || 0, unpricedTokens: sum(a.unpricedTokens, b.unpricedTokens) || 0,
+                incomplete: a.incomplete || b.incomplete, days: days, basis: a.basis, pricingDate: a.pricingDate}
+    }
     property bool busy: false
     property string error: ""
     property double now: Date.now()
@@ -59,6 +77,11 @@ PlasmoidItem {
             try {
                 const result = JSON.parse(data.stdout)
                 if (result.spending) root.spending = result.spending
+                if (result.claude) {
+                    if (result.claude.ok) root.claude = result.claude
+                    else if (result.claude.spending) root.claude = Object.assign({}, root.claude, {spending: result.claude.spending})
+                    root.claudeError = result.claude.ok ? "" : result.claude.message || i18n("Claude refresh failed")
+                }
                 if (result.ok) { root.usage = result; root.error = "" }
                 else root.error = result.message || i18n("Refresh failed")
             } catch (e) { root.error = i18n("Could not start the usage helper") }
@@ -79,14 +102,14 @@ PlasmoidItem {
             color: Kirigami.Theme.textColor
         }
         MouseArea { anchors.fill: parent; onClicked: root.expanded = !root.expanded }
-        Accessible.name: i18n("Codex usage. %1", root.error || root.ageText())
+        Accessible.name: i18n("Codex and Claude usage. %1", root.error || root.claudeError || root.ageText())
     }
     fullRepresentation: Item {
         id: full
         objectName: "usageFullView"
-        implicitWidth: 360; implicitHeight: 320
-        Layout.minimumWidth: 300; Layout.minimumHeight: 290
-        readonly property real contentScale: Math.max(0.88, Math.min(1.45, Math.min(width / 360, height / 320)))
+        implicitWidth: 360; implicitHeight: 520
+        Layout.minimumWidth: 300; Layout.minimumHeight: 470
+        readonly property real contentScale: Math.max(0.82, Math.min(1.45, Math.min(width / 360, height / 520)))
         readonly property real padding: 24 * contentScale
         readonly property bool exactTokens: width >= 440
         readonly property bool showDetails: (width >= 440 && height >= 480) || (width >= 700 && height >= 400)
@@ -178,7 +201,22 @@ PlasmoidItem {
                 }
             }
             Repeater {
-                model: [{label: i18n("5-hour usage"), limit: root.usage.fiveHour}, {label: i18n("Weekly usage"), limit: root.usage.weekly}]
+                model: [{color: root.accent, limits: root.usage}, {color: root.claudeAccent, limits: root.claude}]
+                delegate: ColumnLayout {
+                    id: agentSection
+                    required property var modelData
+                    required property int index
+                    readonly property color barColor: modelData.color
+                    Layout.fillWidth: true; Layout.fillHeight: true
+                    spacing: 10 * full.contentScale
+                    RowLayout {
+                        visible: agentSection.index > 0
+                        spacing: 10 * full.contentScale
+                        Text { text: "✳"; color: root.claudeAccent; font.pixelSize: 22 * full.contentScale; Accessible.ignored: true }
+                        Text { text: "Claude"; color: root.ink; font.pixelSize: 20 * full.contentScale; font.weight: Font.DemiBold }
+                    }
+            Repeater {
+                model: [{label: i18n("5-hour usage"), limit: agentSection.modelData.limits.fiveHour}, {label: i18n("Weekly usage"), limit: agentSection.modelData.limits.weekly}]
                 delegate: ColumnLayout {
                     required property var modelData
                     Layout.fillWidth: true
@@ -218,7 +256,7 @@ PlasmoidItem {
                         Rectangle {
                             height: parent.height; radius: height / 2
                             width: parent.width * (modelData.limit ? (Plasmoid.configuration.remaining ? modelData.limit.remaining : modelData.limit.used) / 100 : 0)
-                            color: root.accent
+                            color: agentSection.barColor
                             Behavior on width { NumberAnimation { duration: 300 } }
                         }
                     }
@@ -228,9 +266,11 @@ PlasmoidItem {
                     }
                 }
             }
+                }
+            }
             RowLayout {
                 spacing: 6
-                Rectangle { width: 4; height: 4; radius: 2; color: root.ink; opacity: root.error ? 0.4 : 0.8 }
+                Rectangle { width: 4; height: 4; radius: 2; color: root.ink; opacity: root.error || root.claudeError ? 0.4 : 0.8 }
                 Text {
                     Layout.fillWidth: true
                     text: root.busy ? i18n("Refreshing…") : root.error ? i18n("Stale · %1", root.ageText()) : root.ageText()
@@ -240,6 +280,7 @@ PlasmoidItem {
                 Text { text: i18n("Tap for spending ↻"); color: root.ink; opacity: 0.55; font.pixelSize: 10 * full.contentScale }
             }
             Text { Layout.fillWidth: true; visible: root.error !== ""; text: root.error; color: root.ink; font.pixelSize: 11 * full.contentScale; wrapMode: Text.WordWrap }
+            Text { Layout.fillWidth: true; visible: root.claudeError !== ""; text: root.claudeError; color: root.ink; font.pixelSize: 11 * full.contentScale; wrapMode: Text.WordWrap }
         }
             }
             back: Item {
@@ -264,13 +305,13 @@ PlasmoidItem {
                     Text { text: i18n("List-price estimate · USD"); color: root.ink; opacity: 0.65; font.pixelSize: 11 * spendingFace.textScale
                         HoverHandler { id: basisHover }
                         Controls.ToolTip.visible: basisHover.hovered
-                        Controls.ToolTip.text: root.spending.basis || "" }
+                        Controls.ToolTip.text: (root.combined.basis || "") + " Claude: local Claude Code history at Anthropic list prices, including cache writes and reads." }
                     Row {
                         id: spendingTotals
                         Layout.fillWidth: true
                         spacing: 16
                         Repeater {
-                            model: [{label: i18n("Today"), value: root.spending.todayUsd}, {label: i18n("Last 30 days"), value: root.spending.monthUsd}]
+                            model: [{label: i18n("Today"), value: root.combined.todayUsd}, {label: i18n("Last 30 days"), value: root.combined.monthUsd}]
                             delegate: Column {
                                 required property var modelData
                                 width: (spendingTotals.width - spendingTotals.spacing) / 2
@@ -280,10 +321,13 @@ PlasmoidItem {
                             }
                         }
                     }
-                    Text { objectName: "tokenSummary"; text: i18n("%1 tokens · local history", full.tokenText(root.spending.tokens)); color: root.ink; opacity: 0.65; font.pixelSize: 11 * spendingFace.textScale
+                    Text { objectName: "agentSplit"; Layout.fillWidth: true; elide: Text.ElideRight
+                        text: i18n("Codex %1 · Claude %2 · 30 days", root.money(root.spending.monthUsd), root.money(root.claudeSpending.monthUsd))
+                        color: root.ink; opacity: 0.8; font.pixelSize: 11 * spendingFace.textScale }
+                    Text { objectName: "tokenSummary"; text: i18n("%1 tokens · local history", full.tokenText(root.combined.tokens)); color: root.ink; opacity: 0.65; font.pixelSize: 11 * spendingFace.textScale
                         HoverHandler { id: tokensHover }
                         Controls.ToolTip.visible: tokensHover.hovered
-                        Controls.ToolTip.text: i18n("Input %1 · cached %2 · output %3", root.count(root.spending.input), root.count(root.spending.cached), root.count(root.spending.output))
+                        Controls.ToolTip.text: i18n("Input %1 · cached %2 · output %3", root.count(root.combined.input), root.count(root.combined.cached), root.count(root.combined.output))
                     }
                     GridLayout {
                         id: spendingGrid
@@ -294,10 +338,10 @@ PlasmoidItem {
                         columnSpacing: 14 * spendingFace.textScale
                         rowSpacing: 10 * spendingFace.textScale
                         Repeater {
-                            model: [{label: i18n("Input · includes cache"), value: root.spending.input},
-                                    {label: i18n("Cached input"), value: root.spending.cached},
-                                    {label: i18n("Output"), value: root.spending.output},
-                                    {label: i18n("Unpriced tokens"), value: root.spending.unpricedTokens}]
+                            model: [{label: i18n("Input · includes cache"), value: root.combined.input},
+                                    {label: i18n("Cached input"), value: root.combined.cached},
+                                    {label: i18n("Output"), value: root.combined.output},
+                                    {label: i18n("Unpriced tokens"), value: root.combined.unpricedTokens}]
                             delegate: Column {
                                 required property var modelData
                                 Layout.fillWidth: true
@@ -319,7 +363,7 @@ PlasmoidItem {
                         id: chart
                         Layout.fillWidth: true; Layout.fillHeight: true; Layout.minimumHeight: 40 * spendingFace.textScale
                         spacing: 3
-                        readonly property var days: root.spending.days || []
+                        readonly property var days: root.combined.days || []
                         readonly property real maximum: Math.max(0.01, ...days.map(day => day.usd))
                         Repeater {
                             model: chart.days
@@ -328,13 +372,19 @@ PlasmoidItem {
                                 width: Math.max(1, (chart.width - (chart.days.length - 1) * chart.spacing) / Math.max(1, chart.days.length))
                                 height: chart.height
                                 Rectangle {
+                                    id: codexBar
                                     anchors.bottom: parent.bottom; width: parent.width; radius: Math.min(2, width / 2)
-                                    height: modelData.usd > 0 ? Math.max(2, parent.height * modelData.usd / chart.maximum) : 1
+                                    height: modelData.usd <= 0 ? 1 : modelData.codex > 0 ? Math.max(1, parent.height * modelData.codex / chart.maximum) : 0
                                     color: root.accent; opacity: modelData.usd > 0 ? 0.85 : 0.15
+                                }
+                                Rectangle {
+                                    anchors.bottom: codexBar.top; width: parent.width; radius: Math.min(2, width / 2)
+                                    height: modelData.claude > 0 ? Math.max(1, parent.height * modelData.claude / chart.maximum) : 0
+                                    color: root.claudeAccent; opacity: 0.9
                                 }
                                 HoverHandler { id: barHover }
                                 Controls.ToolTip.visible: barHover.hovered
-                                Controls.ToolTip.text: modelData.date + " · " + root.money(modelData.usd)
+                                Controls.ToolTip.text: i18n("%1 · %2 · Codex %3 · Claude %4", modelData.date, root.money(modelData.usd), root.money(modelData.codex), root.money(modelData.claude))
                             }
                         }
                     }
@@ -346,13 +396,13 @@ PlasmoidItem {
                     }
                     Text {
                         Layout.fillWidth: true
-                        text: !root.spending.ok ? i18n("Local spending history unavailable") : !root.spending.tokens ? i18n("No recorded token history") : root.spending.incomplete ? i18n("Priced portion only · %1 unpriced tokens", full.tokenText(root.spending.unpricedTokens)) : i18n("API-equivalent estimate · not your bill")
+                        text: !root.combined.ok ? i18n("Local spending history unavailable") : !root.combined.tokens ? i18n("No recorded token history") : root.combined.incomplete ? i18n("Priced portion only · %1 unpriced tokens", full.tokenText(root.combined.unpricedTokens)) : i18n("API-equivalent estimate · not your bill")
                         color: root.ink; opacity: 0.65; font.pixelSize: 10 * spendingFace.textScale; wrapMode: Text.WordWrap
                     }
                     Text {
                         visible: full.showDetails && full.height >= 520
                         Layout.fillWidth: true
-                        text: i18n("Hypothetical API token cost · pricing snapshot %1", root.spending.pricingDate || "—") + "\n" + (root.spending.basis || "")
+                        text: i18n("Hypothetical API token cost · pricing snapshot %1", (root.combined.pricingDate || "—") + " / " + (root.claudeSpending.pricingDate || "—")) + "\n" + ((root.combined.basis || "") + " Claude: local Claude Code history at Anthropic list prices, including cache writes and reads.")
                         color: root.ink; opacity: 0.5; font.pixelSize: 10 * spendingFace.textScale; wrapMode: Text.WordWrap
                     }
                     Text { objectName: "spendingHint"; text: i18n("Tap to return to usage ↻"); color: root.ink; opacity: 0.5; font.pixelSize: 10 * spendingFace.textScale }

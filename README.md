@@ -50,6 +50,12 @@ Right-click → **Configure Codex Glass** to choose:
 
 Auto-detection checks PATH, common user installation locations, and nvm installations. For npm/nvm installs it uses the matching Node executable when available, so Plasma does not need to load your shell configuration. A Codex desktop installation with a bundled CLI can use that executable through the path setting; the graphical desktop launcher itself is not an app-server executable.
 
+## Claude usage
+
+If you use Claude Code, a **Claude** section appears under Codex with your plan's 5-hour and weekly usage. It reuses Claude Code's existing sign-in (`~/.claude/.credentials.json`), sends that token only to Anthropic's usage endpoint, and never refreshes or stores it — if the sign-in expires, open Claude Code once.
+
+The spending face adds Claude Code's local history (`~/.claude/projects`) to Codex's: totals, token counts and the daily chart cover both agents, with a per-agent split line and stacked chart bars. Claude is priced at Anthropic list rates, including 5-minute/1-hour cache writes and cache reads.
+
 ## Flip to spending
 
 Tap the expanded widget to flip it over; tap again or use the back arrow to return to usage. Space/Return work when the card has focus. The refresh button refreshes without flipping. Panel users first click the compact indicator to expand the widget.
