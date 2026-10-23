@@ -1,5 +1,6 @@
 """Claude Code plan limits and local API-equivalent spending (USD)."""
 import datetime as dt
+import fcntl
 import json
 import math
 import os
@@ -11,6 +12,8 @@ import urllib.request
 
 USAGE_URL = 'https://api.anthropic.com/api/oauth/usage'
 TIMEOUT = 15
+MIN_INTERVAL = 300  # seconds between real usage requests, shared by all widgets
+MAX_BACKOFF = 3600
 
 # USD / million tokens: input, 5-minute cache write, 1-hour cache write, cache read, output.
 # Anthropic list prices, snapshot 2026-10-06. Writes are 1.25x / 2x input.
@@ -162,7 +165,7 @@ def normalize_limits(payload):
     return result
 
 
-def read_limits(home=None):
+def fetch_limits(home=None):
     """Read Claude Code's own sign-in and ask Anthropic for plan usage. Never refreshes or stores tokens."""
     home = Path(home or os.environ.get('CLAUDE_CONFIG_DIR') or Path.home()/'.claude')
     try:
@@ -183,11 +186,58 @@ def read_limits(home=None):
     except urllib.error.HTTPError as error:
         if error.code in (401, 403):
             return {'ok': False, 'message': 'Claude sign-in expired. Open Claude Code once to renew it.'}
+        if error.code == 429:
+            return {'ok': False, 'rateLimited': True, 'retryAfter': error.headers.get('retry-after'),
+                    'message': 'Claude is rate limiting usage checks. Retrying shortly.'}
         return {'ok': False, 'message': 'Unable to refresh Claude usage. Try again later.'}
     except (urllib.error.URLError, TimeoutError, OSError):
         return {'ok': False, 'message': 'Unable to reach Claude. Check your connection.'}
     except (ValueError, TypeError):
         return {'ok': False, 'message': 'Could not read Claude usage.'}
+
+
+def read_limits(home=None, cache=None, now=None):
+    """Share one Anthropic request across widget instances, and back off when rate limited.
+
+    The cache holds only the normalized percentages and timing, never credentials."""
+    now = time.time() if now is None else now
+    cache = Path(cache or Path(os.environ.get('XDG_CACHE_HOME') or Path.home()/'.cache')/'agent-glass/claude-limits.json')
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    with open(cache.with_suffix('.lock'), 'w') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        try:
+            state = json.loads(cache.read_text())
+            if not isinstance(state, dict):
+                state = {}
+        except (OSError, ValueError):
+            state = {}
+        last = state.get('limits') if isinstance(state.get('limits'), dict) else None
+        fresh = last and now - state.get('fetchedAt', 0) < MIN_INTERVAL
+        if fresh or now < state.get('retryAt', 0):
+            if last:
+                result = dict(last)
+                if not fresh and state.get('message'):
+                    result['message'] = state['message']
+                return result
+            return {'ok': False, 'message': state.get('message') or 'Waiting to retry Claude usage.'}
+        result = fetch_limits(home)
+        if result.get('ok'):
+            state = {'limits': result, 'fetchedAt': now}
+        else:
+            failures = state.get('failures', 0)+1
+            wait = min(MAX_BACKOFF, MIN_INTERVAL * 2**(failures-1)) if result.get('rateLimited') else MIN_INTERVAL
+            try:
+                wait = max(wait, min(MAX_BACKOFF, float(result.get('retryAfter'))))
+            except (TypeError, ValueError):
+                pass
+            state.update({'retryAt': now+wait, 'failures': failures, 'message': result['message']})
+            if last:
+                # Keep showing the last good numbers, labelled stale, rather than blanking the bars.
+                result = dict(last, message=result['message'])
+        tmp = cache.with_suffix('.tmp')
+        tmp.write_text(json.dumps(state))
+        tmp.replace(cache)
+        return result
 
 
 def main():

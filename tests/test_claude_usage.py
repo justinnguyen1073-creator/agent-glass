@@ -54,7 +54,28 @@ class ClaudeUsageTest(unittest.TestCase):
 
     def test_missing_credentials(self):
         with tempfile.TemporaryDirectory() as home:
-            self.assertFalse(claude_usage.read_limits(home)['ok'])
+            self.assertFalse(claude_usage.fetch_limits(home)['ok'])
+
+    def test_cache_shares_requests_and_backs_off(self):
+        calls = []
+        good = {'ok': True, 'fiveHour': {'used': 5, 'remaining': 95, 'resetsAt': None}, 'weekly': None}
+        limited = {'ok': False, 'rateLimited': True, 'retryAfter': None, 'message': 'limited'}
+        original = claude_usage.fetch_limits
+        try:
+            with tempfile.TemporaryDirectory() as folder:
+                cache = Path(folder) / 'c.json'
+                claude_usage.fetch_limits = lambda home=None: calls.append(1) or good
+                self.assertEqual(claude_usage.read_limits(cache=cache, now=1000)['fiveHour']['used'], 5)
+                claude_usage.read_limits(cache=cache, now=1100)
+                self.assertEqual(len(calls), 1)
+                claude_usage.fetch_limits = lambda home=None: calls.append(1) or limited
+                stale = claude_usage.read_limits(cache=cache, now=1400)
+                self.assertTrue(stale['ok'])
+                self.assertEqual(stale['message'], 'limited')
+                claude_usage.read_limits(cache=cache, now=1500)
+                self.assertEqual(len(calls), 2)
+        finally:
+            claude_usage.fetch_limits = original
 
 
 if __name__ == '__main__':

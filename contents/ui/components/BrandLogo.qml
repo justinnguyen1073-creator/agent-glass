@@ -12,7 +12,7 @@ Item {
         scale: Math.min(logo.width, logo.height) / 24
         transformOrigin: Item.TopLeft
         x: (logo.width - 24 * scale) / 2; y: (logo.height - 24 * scale) / 2
-        preferredRendererType: Shape.CurveRenderer
+        layer.enabled: true; layer.samples: 8; layer.smooth: true
         ShapePath {
             strokeWidth: -1
             fillColor: logo.color

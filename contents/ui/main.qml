@@ -84,7 +84,7 @@ PlasmoidItem {
                 if (result.claude) {
                     if (result.claude.ok) root.claude = result.claude
                     else if (result.claude.spending) root.claude = Object.assign({}, root.claude, {spending: result.claude.spending})
-                    root.claudeError = result.claude.ok ? "" : result.claude.message || i18n("Claude refresh failed")
+                    root.claudeError = result.claude.message || (result.claude.ok ? "" : i18n("Claude refresh failed"))
                 }
                 if (result.ok) { root.usage = result; root.error = "" }
                 else root.error = result.message || i18n("Refresh failed")
