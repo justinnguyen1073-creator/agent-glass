@@ -176,7 +176,7 @@ def read_limits(home=None):
         return {'ok': False, 'message': 'Claude sign-in expired. Open Claude Code once to renew it.'}
     request = urllib.request.Request(USAGE_URL, headers={
         'Authorization': 'Bearer '+token, 'anthropic-beta': 'oauth-2025-04-20',
-        'User-Agent': 'codex-glass/1.2', 'Accept': 'application/json'})
+        'User-Agent': 'agent-glass/3.0', 'Accept': 'application/json'})
     try:
         with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
             return normalize_limits(json.loads(response.read(2*1024*1024)))

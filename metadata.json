@@ -2,14 +2,14 @@
   "KPackageStructure": "Plasma/Applet",
   "KPlugin": {
     "Id": "org.local.codexglass2",
-    "Name": "Codex Glass",
-    "Description": "Codex usage in a liquid glass dashboard",
-    "Version": "2.3.0",
+    "Name": "Agent Glass",
+    "Description": "Codex and Claude usage and spending in a liquid glass dashboard",
+    "Version": "3.0.0",
     "License": "GPL-3.0-or-later",
     "Icon": "utilities-terminal",
     "Authors": [
       {
-        "Name": "Codex Glass contributors"
+        "Name": "Agent Glass contributors"
       }
     ],
     "Category": "System Information"

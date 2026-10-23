@@ -1,4 +1,6 @@
-# Codex Glass — Plasma 6
+# Agent Glass — Plasma 6
+
+Formerly **Codex Glass**. Tracks Codex and Claude Code usage side by side, with combined spending.
 
 A native KDE Plasma widget for your Codex account's 5-hour and weekly usage, with Liquid Glass styling and desktop/panel support.
 
@@ -23,24 +25,24 @@ If you already use Codex, keep your existing installation and sign-in. No separa
 ### Install the widget
 
 ```sh
-git clone https://github.com/justinnguyen1073-creator/codex-glass.git
-cd codex-glass
+git clone https://github.com/justinnguyen1073-creator/agent-glass.git
+cd agent-glass
 ./install.sh
 ```
 
 The installer registers only `org.local.codexglass2` in your personal Plasma widget directory. It does not edit panels, change desktop configuration, modify other widgets, or restart Plasma.
 
-Right-click the desktop or enter panel edit mode, choose **Add Widgets**, search **Codex Glass**, and drag it into place. In a panel, click the compact indicator to open the full view.
+Right-click the desktop or enter panel edit mode, choose **Add Widgets**, search **Agent Glass**, and drag it into place. In a panel, click the compact indicator to open the full view.
 
 ### Upgrading from the original Codex Glass
 
-**Add the new widget named “Codex Glass”.** It has a new package ID (`org.local.codexglass2`) so Plasma loads the redesigned QML from a fresh path. In a long-running Plasma session, upgrading the original package on disk can leave its old QML component cached, even when its settings page is updated. Removing and re-adding the original name may still reuse that cached component.
+**Add the new widget named “Agent Glass”.** It has a new package ID (`org.local.codexglass2`) so Plasma loads the redesigned QML from a fresh path. In a long-running Plasma session, upgrading the original package on disk can leave its old QML component cached, even when its settings page is updated. Removing and re-adding the original name may still reuse that cached component.
 
-The installer deliberately leaves the old widget and its placement intact. Once you have added Codex Glass, remove the old instance through desktop edit mode. The new widget starts with fresh settings; no Plasma restart or manual desktop configuration edit is required.
+The installer deliberately leaves the old widget and its placement intact. Once you have added Agent Glass, remove the old instance through desktop edit mode. The new widget starts with fresh settings; no Plasma restart or manual desktop configuration edit is required.
 
 ### Configure
 
-Right-click → **Configure Codex Glass** to choose:
+Right-click → **Configure Agent Glass** to choose:
 
 - Refresh interval: default 60 seconds, configurable from 15 to 3600 seconds.
 - Appearance: glass or solid background. Glass matches the Liquid Glass widgets with white lettering, wallpaper-driven color, and a default 10% tint. Solid mode supports follow-system, dark, or light appearance.
@@ -77,7 +79,7 @@ git pull --ff-only
 ./install.sh
 ```
 
-For the original-to-v2 migration, add **Codex Glass** as described above. Future updates within the same package ID can still be affected by Plasma's in-memory QML cache; the installer never restarts your session automatically.
+For the original-to-v2 migration, add **Agent Glass** as described above. Future updates within the same package ID can still be affected by Plasma's in-memory QML cache; the installer never restarts your session automatically.
 
 To build an installable archive using Python's standard library:
 
@@ -85,7 +87,7 @@ To build an installable archive using Python's standard library:
 python3 build-package.py
 ```
 
-In Plasma, use Add Widgets → Get New Widgets → Install Widget From Local File and select `dist/codex-glass.plasmoid`.
+In Plasma, use Add Widgets → Get New Widgets → Install Widget From Local File and select `dist/agent-glass.plasmoid`.
 
 Remove instances using Plasma's edit mode. To uninstall the package:
 
@@ -128,6 +130,8 @@ An independent frozen copy of native Codex logs has been compared with CodexBar:
 Live direct Codex retrieval has been verified with Codex CLI 0.163.0. QML compilation and standalone rendering/data connection checks cover the widget views; actual desktop wallpaper refraction must be checked after adding the widget to a containment.
 
 ## Attribution and license
+
+ChatGPT/OpenAI and Claude logos come from [Simple Icons](https://simpleicons.org) (CC0) and are trademarks of OpenAI and Anthropic; this project is not affiliated with either.
 
 GPL-3.0-or-later; see [LICENSE](LICENSE). The unmodified `contents/ui/components/LiquidGlass.qml` and shader sources/binaries are from Jaxparrow07's [liquidglass-kde-widgets](https://github.com/jaxparrow07/liquidglass-kde-widgets) project. They are vendored copies for this separate package, with no changes to the original project or installed widgets. All corresponding shader sources are included.
 

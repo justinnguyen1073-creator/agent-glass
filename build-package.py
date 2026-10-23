@@ -4,7 +4,7 @@ from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED
 
 root = Path(__file__).resolve().parent
-target = root / "dist" / "codex-glass.plasmoid"
+target = root / "dist" / "agent-glass.plasmoid"
 target.parent.mkdir(exist_ok=True)
 with ZipFile(target, "w", ZIP_DEFLATED) as archive:
     for name in ("metadata.json", "LICENSE", "README.md", "THIRD_PARTY_NOTICES.md"):

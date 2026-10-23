@@ -15,6 +15,8 @@ PlasmoidItem {
     property var usage: ({})
     property var spending: ({})
     property var claude: ({})
+    readonly property url chatgptLogo: Qt.resolvedUrl("icons/chatgpt.svg")
+    readonly property url claudeLogo: Qt.resolvedUrl("icons/claude.svg")
     // 0 both agents, 1 Codex only, 2 Claude only. Spending always combines both.
     readonly property int agent: Plasmoid.configuration.agent
     readonly property bool claudeOnly: agent === 2
@@ -95,15 +97,25 @@ PlasmoidItem {
     Timer { interval: Math.max(15, Plasmoid.configuration.refreshInterval) * 1000; repeat: true; running: true; onTriggered: root.refresh() }
     Timer { interval: 15000; repeat: true; running: true; onTriggered: root.now = Date.now() }
     Component.onCompleted: refresh()
-    toolTipMainText: "Codex Glass"
+    toolTipMainText: "Agent Glass"
     toolTipSubText: error || ageText()
     compactRepresentation: Item {
         implicitWidth: 74; implicitHeight: 32
         Layout.minimumWidth: 40
-        Controls.Label {
+        Row {
             anchors.centerIn: parent
-            text: (root.claudeOnly ? "✳ " : "›_ ") + (root.primaryUsage.fiveHour ? Math.round(Plasmoid.configuration.remaining ? root.primaryUsage.fiveHour.remaining : root.primaryUsage.fiveHour.used) + "%" : "—")
+            spacing: 5
+            Kirigami.Icon {
+                anchors.verticalCenter: parent.verticalCenter
+                width: 16; height: 16; isMask: true
+                source: root.claudeOnly ? root.claudeLogo : root.chatgptLogo
+                color: root.claudeOnly ? root.claudeAccent : Kirigami.Theme.textColor
+            }
+        Controls.Label {
+            anchors.verticalCenter: parent.verticalCenter
+            text: (root.primaryUsage.fiveHour ? Math.round(Plasmoid.configuration.remaining ? root.primaryUsage.fiveHour.remaining : root.primaryUsage.fiveHour.used) + "%" : "—")
             color: Kirigami.Theme.textColor
+        }
         }
         MouseArea { anchors.fill: parent; onClicked: root.expanded = !root.expanded }
         Accessible.name: i18n("Codex and Claude usage. %1", root.error || root.claudeError || root.ageText())
@@ -185,9 +197,10 @@ PlasmoidItem {
             spacing: 14 * full.contentScale
             RowLayout {
                 spacing: 10 * full.contentScale
-                Text {
-                    text: root.claudeOnly ? "✳" : "›_"; color: root.claudeOnly ? root.claudeAccent : root.ink
-                    font.pixelSize: 27 * full.contentScale; font.weight: Font.Medium
+                Kirigami.Icon {
+                    implicitWidth: 24 * full.contentScale; implicitHeight: implicitWidth; isMask: true
+                    source: root.claudeOnly ? root.claudeLogo : root.chatgptLogo
+                    color: root.claudeOnly ? root.claudeAccent : root.ink
                     Accessible.ignored: true
                 }
                 Text { text: root.claudeOnly ? "Claude" : "Codex"; color: root.ink; font.pixelSize: 20 * full.contentScale; font.weight: Font.DemiBold }
@@ -219,7 +232,7 @@ PlasmoidItem {
                     RowLayout {
                         visible: root.agent === 0 && agentSection.index > 0
                         spacing: 10 * full.contentScale
-                        Text { text: "✳"; color: root.claudeAccent; font.pixelSize: 22 * full.contentScale; Accessible.ignored: true }
+                        Kirigami.Icon { implicitWidth: 24 * full.contentScale; implicitHeight: implicitWidth; isMask: true; source: root.claudeLogo; color: root.claudeAccent; Accessible.ignored: true }
                         Text { text: "Claude"; color: root.ink; font.pixelSize: 20 * full.contentScale; font.weight: Font.DemiBold }
                     }
             Repeater {

@@ -135,7 +135,7 @@ def read_limits(command, timeout=TIMEOUT):
 
     try:
         send({'id': 1, 'method': 'initialize', 'params': {
-            'clientInfo': {'name': 'codex_glass', 'title': 'Codex Glass', 'version': '2.1.0'}}})
+            'clientInfo': {'name': 'codex_glass', 'title': 'Agent Glass', 'version': '3.0.0'}}})
         receive(1)
         send({'method': 'initialized', 'params': {}})
         send({'id': 2, 'method': 'account/rateLimits/read'})
