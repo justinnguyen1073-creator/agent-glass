@@ -15,8 +15,6 @@ PlasmoidItem {
     property var usage: ({})
     property var spending: ({})
     property var claude: ({})
-    readonly property url chatgptLogo: Qt.resolvedUrl("icons/chatgpt.svg")
-    readonly property url claudeLogo: Qt.resolvedUrl("icons/claude.svg")
     // 0 both agents, 1 Codex only, 2 Claude only. Spending always combines both.
     readonly property int agent: Plasmoid.configuration.agent
     readonly property bool claudeOnly: agent === 2
@@ -105,10 +103,10 @@ PlasmoidItem {
         Row {
             anchors.centerIn: parent
             spacing: 5
-            Kirigami.Icon {
+            BrandLogo {
                 anchors.verticalCenter: parent.verticalCenter
-                width: 16; height: 16; isMask: true
-                source: root.claudeOnly ? root.claudeLogo : root.chatgptLogo
+                width: 16; height: 16
+                brand: root.claudeOnly ? "claude" : "chatgpt"
                 color: root.claudeOnly ? root.claudeAccent : Kirigami.Theme.textColor
             }
         Controls.Label {
@@ -197,9 +195,9 @@ PlasmoidItem {
             spacing: 14 * full.contentScale
             RowLayout {
                 spacing: 10 * full.contentScale
-                Kirigami.Icon {
-                    implicitWidth: 24 * full.contentScale; implicitHeight: implicitWidth; isMask: true
-                    source: root.claudeOnly ? root.claudeLogo : root.chatgptLogo
+                BrandLogo {
+                    Layout.preferredWidth: 24 * full.contentScale; Layout.preferredHeight: Layout.preferredWidth
+                    brand: root.claudeOnly ? "claude" : "chatgpt"
                     color: root.claudeOnly ? root.claudeAccent : root.ink
                     Accessible.ignored: true
                 }
@@ -232,7 +230,7 @@ PlasmoidItem {
                     RowLayout {
                         visible: root.agent === 0 && agentSection.index > 0
                         spacing: 10 * full.contentScale
-                        Kirigami.Icon { implicitWidth: 24 * full.contentScale; implicitHeight: implicitWidth; isMask: true; source: root.claudeLogo; color: root.claudeAccent; Accessible.ignored: true }
+                        BrandLogo { Layout.preferredWidth: 24 * full.contentScale; Layout.preferredHeight: Layout.preferredWidth; brand: "claude"; color: root.claudeAccent; Accessible.ignored: true }
                         Text { text: "Claude"; color: root.ink; font.pixelSize: 20 * full.contentScale; font.weight: Font.DemiBold }
                     }
             Repeater {

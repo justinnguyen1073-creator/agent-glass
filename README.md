@@ -131,7 +131,7 @@ Live direct Codex retrieval has been verified with Codex CLI 0.163.0. QML compil
 
 ## Attribution and license
 
-ChatGPT/OpenAI and Claude logos come from [Simple Icons](https://simpleicons.org) (CC0) and are trademarks of OpenAI and Anthropic; this project is not affiliated with either.
+ChatGPT/OpenAI and Claude logo paths come from [Simple Icons](https://simpleicons.org) (CC0) and are trademarks of OpenAI and Anthropic; this project is not affiliated with either.
 
 GPL-3.0-or-later; see [LICENSE](LICENSE). The unmodified `contents/ui/components/LiquidGlass.qml` and shader sources/binaries are from Jaxparrow07's [liquidglass-kde-widgets](https://github.com/jaxparrow07/liquidglass-kde-widgets) project. They are vendored copies for this separate package, with no changes to the original project or installed widgets. All corresponding shader sources are included.
 
