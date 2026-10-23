@@ -15,6 +15,10 @@ PlasmoidItem {
     property var usage: ({})
     property var spending: ({})
     property var claude: ({})
+    // 0 both agents, 1 Codex only, 2 Claude only. Spending always combines both.
+    readonly property int agent: Plasmoid.configuration.agent
+    readonly property bool claudeOnly: agent === 2
+    readonly property var primaryUsage: claudeOnly ? claude : usage
     property string claudeError: ""
     readonly property color claudeAccent: Plasmoid.configuration.glass ? "#ffd2b8" : light ? "#b4542f" : "#f0a07a"
     // Both agents' local history, merged per day; null totals stay null only if neither priced anything.
@@ -62,7 +66,7 @@ PlasmoidItem {
         return isNaN(date.getTime()) ? i18n("Reset time unavailable") : i18n("Resets %1", date.toLocaleString(Qt.locale(), date.toDateString() === new Date(root.now).toDateString() ? "h:mm AP t" : "ddd · h:mm AP t"))
     }
     function ageText() {
-        const stamp = new Date(usage.updatedAt).getTime()
+        const stamp = new Date(primaryUsage.updatedAt).getTime()
         if (!isFinite(stamp)) return i18n("Not updated yet")
         const age = Math.max(0, Math.floor((now - stamp) / 60000))
         return age === 0 ? i18n("Updated just now") : i18n("Updated %1 min ago", age)
@@ -98,7 +102,7 @@ PlasmoidItem {
         Layout.minimumWidth: 40
         Controls.Label {
             anchors.centerIn: parent
-            text: root.usage.fiveHour ? "›_ " + Math.round(Plasmoid.configuration.remaining ? root.usage.fiveHour.remaining : root.usage.fiveHour.used) + "%" : "›_ —"
+            text: (root.claudeOnly ? "✳ " : "›_ ") + (root.primaryUsage.fiveHour ? Math.round(Plasmoid.configuration.remaining ? root.primaryUsage.fiveHour.remaining : root.primaryUsage.fiveHour.used) + "%" : "—")
             color: Kirigami.Theme.textColor
         }
         MouseArea { anchors.fill: parent; onClicked: root.expanded = !root.expanded }
@@ -107,9 +111,10 @@ PlasmoidItem {
     fullRepresentation: Item {
         id: full
         objectName: "usageFullView"
-        implicitWidth: 360; implicitHeight: 520
-        Layout.minimumWidth: 300; Layout.minimumHeight: 470
-        readonly property real contentScale: Math.max(0.82, Math.min(1.45, Math.min(width / 360, height / 520)))
+        readonly property real baseHeight: root.agent === 0 ? 520 : 320
+        implicitWidth: 360; implicitHeight: baseHeight
+        Layout.minimumWidth: 300; Layout.minimumHeight: root.agent === 0 ? 470 : 290
+        readonly property real contentScale: Math.max(0.82, Math.min(1.45, Math.min(width / 360, height / baseHeight)))
         readonly property real padding: 24 * contentScale
         readonly property bool exactTokens: width >= 440
         readonly property bool showDetails: (width >= 440 && height >= 480) || (width >= 700 && height >= 400)
@@ -181,11 +186,11 @@ PlasmoidItem {
             RowLayout {
                 spacing: 10 * full.contentScale
                 Text {
-                    text: "›_"; color: root.ink
+                    text: root.claudeOnly ? "✳" : "›_"; color: root.claudeOnly ? root.claudeAccent : root.ink
                     font.pixelSize: 27 * full.contentScale; font.weight: Font.Medium
                     Accessible.ignored: true
                 }
-                Text { text: "Codex"; color: root.ink; font.pixelSize: 20 * full.contentScale; font.weight: Font.DemiBold }
+                Text { text: root.claudeOnly ? "Claude" : "Codex"; color: root.ink; font.pixelSize: 20 * full.contentScale; font.weight: Font.DemiBold }
                 Item { Layout.fillWidth: true }
                 Controls.ToolButton {
                     objectName: "refreshButton"
@@ -201,7 +206,9 @@ PlasmoidItem {
                 }
             }
             Repeater {
-                model: [{color: root.accent, limits: root.usage}, {color: root.claudeAccent, limits: root.claude}]
+                model: root.agent === 1 ? [{color: root.accent, limits: root.usage}]
+                     : root.agent === 2 ? [{color: root.claudeAccent, limits: root.claude}]
+                     : [{color: root.accent, limits: root.usage}, {color: root.claudeAccent, limits: root.claude}]
                 delegate: ColumnLayout {
                     id: agentSection
                     required property var modelData
@@ -210,7 +217,7 @@ PlasmoidItem {
                     Layout.fillWidth: true; Layout.fillHeight: true
                     spacing: 10 * full.contentScale
                     RowLayout {
-                        visible: agentSection.index > 0
+                        visible: root.agent === 0 && agentSection.index > 0
                         spacing: 10 * full.contentScale
                         Text { text: "✳"; color: root.claudeAccent; font.pixelSize: 22 * full.contentScale; Accessible.ignored: true }
                         Text { text: "Claude"; color: root.ink; font.pixelSize: 20 * full.contentScale; font.weight: Font.DemiBold }
@@ -279,8 +286,8 @@ PlasmoidItem {
                 }
                 Text { text: i18n("Tap for spending ↻"); color: root.ink; opacity: 0.55; font.pixelSize: 10 * full.contentScale }
             }
-            Text { Layout.fillWidth: true; visible: root.error !== ""; text: root.error; color: root.ink; font.pixelSize: 11 * full.contentScale; wrapMode: Text.WordWrap }
-            Text { Layout.fillWidth: true; visible: root.claudeError !== ""; text: root.claudeError; color: root.ink; font.pixelSize: 11 * full.contentScale; wrapMode: Text.WordWrap }
+            Text { Layout.fillWidth: true; visible: !root.claudeOnly && root.error !== ""; text: root.error; color: root.ink; font.pixelSize: 11 * full.contentScale; wrapMode: Text.WordWrap }
+            Text { Layout.fillWidth: true; visible: root.agent !== 1 && root.claudeError !== ""; text: root.claudeError; color: root.ink; font.pixelSize: 11 * full.contentScale; wrapMode: Text.WordWrap }
         }
             }
             back: Item {
