@@ -16,7 +16,7 @@ PlasmoidItem {
     property var spending: ({})
     property var claude: ({})
     // 0 both agents, 1 Codex only, 2 Claude only. Spending always combines both.
-    readonly property int agent: Plasmoid.configuration.agent
+    readonly property int agent: Plasmoid.configuration.showCodex === Plasmoid.configuration.showClaude ? 0 : Plasmoid.configuration.showCodex ? 1 : 2
     readonly property bool claudeOnly: agent === 2
     readonly property var primaryUsage: claudeOnly ? claude : usage
     property string claudeError: ""
