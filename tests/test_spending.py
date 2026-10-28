@@ -35,6 +35,13 @@ class SpendingTests(unittest.TestCase):
         self.write('sessions/a.jsonl',[event()])
         self.write('archived_sessions/copy.jsonl',[event()])
         self.assertEqual(self.summary()['tokens'],1100)
+    def test_compressed_rollouts_are_read(self):
+        from compression import zstd
+        self.write('sessions/a.jsonl',[event()])
+        path=self.home/'sessions/a.jsonl'
+        (self.home/'sessions/a.jsonl.zst').write_bytes(zstd.compress(path.read_bytes())); path.unlink()
+        (self.home/'sessions/broken.jsonl.zst').write_bytes(b'not zstd')
+        self.assertEqual(self.summary()['tokens'],1100)
     def test_local_today_and_thirty_days(self):
         self.write('sessions/a.jsonl',[event('2026-09-01'),event('2026-10-14',inp=2000,cached=1600,out=200),event(inp=3000,cached=2400,out=300)])
         result=self.summary()

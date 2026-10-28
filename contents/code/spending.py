@@ -124,10 +124,18 @@ def price(request):
     return cost*multiplier/1e6
 
 
+def open_log(path):
+    """Codex compresses older rollouts to .jsonl.zst."""
+    if path.name.endswith('.zst'):
+        from compression import zstd  # Python 3.14+
+        return zstd.open(path, 'rt', errors='replace')
+    return path.open()
+
+
 def read_session(path):
     """Prefer owned request IDs; reconcile their legacy notification mirrors."""
     events = []
-    with path.open() as stream:
+    with open_log(path) as stream:
         for line in stream:
             if not any(marker in line for marker in ('"session_meta"', '"turn_context"', '"token_count"',
                                                      '"token_usage_record"', '"task_started"', '"session_configured"')):
@@ -319,12 +327,14 @@ def summarize(home=None, today=None):
         if not base.is_dir():
             continue
         found = True
-        for path in sorted(base.rglob('*.jsonl')):
+        for path in sorted(base.rglob('*.jsonl*')):
+            if not path.name.endswith(('.jsonl', '.jsonl.zst')):
+                continue
             try:
                 if path.stat().st_mtime < start_time:
                     continue
                 session_id, requests = read_session(path)
-            except (OSError, ValueError):
+            except Exception:  # unreadable or corrupt log, including zstd errors
                 errors += 1
                 continue
             if session_id in seen:
@@ -356,6 +366,6 @@ def summarize(home=None, today=None):
         'tokens': totals[0]+totals[3], 'input': totals[0], 'cached': totals[1], 'output': totals[3],
         'unpricedTokens': unknown, 'incomplete': bool(unknown or errors),
         'days': [{'date': date.isoformat(), 'usd': round(value['usd'], 6), 'tokens': value['tokens']} for date, value in days.items()],
-        'basis': 'API-equivalent token estimate with request-level long-context, known Fast and historical rates. Local history only; excludes tools and unknown model prices.',
+        'basis': 'API-equivalent token estimate with request-level long-context, known Fast and historical rates. Local history only (including compressed .jsonl.zst logs); excludes tools and unknown model prices.',
         'pricingDate': '2026-10-27',
     }
