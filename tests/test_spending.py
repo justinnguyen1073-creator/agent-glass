@@ -157,7 +157,7 @@ class PricingTests(unittest.TestCase):
         self.assertAlmostEqual(price(self.request('gpt-6-astra',(300000,0,0,100),fast=True)),12.015)
     def test_unknown_model_or_unpublished_fast_is_unpriced(self):
         self.assertIsNone(price(self.request('codex-auto-review',(1000,0,0,100))))
-        self.assertIsNone(price(self.request('gpt-6.1-sol',(1000,0,0,100),fast=True)))
+        self.assertIsNone(price(self.request('gpt-5.2',(1000,0,0,100),fast=True)))
     def test_cached_input_is_subset_and_writes_are_not_double_billed(self):
         self.assertAlmostEqual(price(self.request('gpt-6.1-sol',(1000,600,200,100))),.00196)
     def test_dated_and_provider_prefixed_models(self):

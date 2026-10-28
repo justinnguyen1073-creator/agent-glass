@@ -16,7 +16,7 @@ MIN_INTERVAL = 300  # seconds between real usage requests, shared by all widgets
 MAX_BACKOFF = 3600
 
 # USD / million tokens: input, 5-minute cache write, 1-hour cache write, cache read, output.
-# Anthropic list prices, snapshot 2026-10-06. Writes are 1.25x / 2x input.
+# Anthropic list prices, snapshot 2026-10-27. Writes are 1.25x / 2x input.
 # https://platform.claude.com/docs/en/about-claude/pricing
 def _rates(inp, out, read=None):
     return (inp, inp*1.25, inp*2, inp*.1 if read is None else read, out)
@@ -34,7 +34,7 @@ PRICES = {
     'claude-opus-4-5': _rates(5, 25),
     'claude-opus-4-1': _rates(15, 75),
     'claude-opus-4': _rates(15, 75),
-    'claude-sonnet-5-5': _rates(2, 10, .2),
+    'claude-sonnet-5-5': _rates(2, 10, .1),
     'claude-sonnet-5': _rates(2, 10),
     'claude-sonnet-4-6': _rates(3, 15),
     'claude-sonnet-4-5': _rates(3, 15),
@@ -140,7 +140,7 @@ def summarize(home=None, today=None):
         'tokens': sum(totals), 'input': inp+w5+w1h+read, 'cached': read, 'cacheWrites': w5+w1h, 'output': out,
         'unpricedTokens': unknown, 'incomplete': bool(unknown or errors),
         'days': [{'date': d.isoformat(), 'usd': round(v['usd'], 6), 'tokens': v['tokens']} for d, v in days.items()],
-        'pricingDate': '2026-10-06',
+        'pricingDate': '2026-10-27',
     }
 
 

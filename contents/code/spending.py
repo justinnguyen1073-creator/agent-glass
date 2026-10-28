@@ -38,15 +38,20 @@ PRICES = {
     'gpt-5.6-cyber': (12.5, 1.25, 15.625, 75),
     'gpt-5.5-cyber': (12.5, 1.25, None, 75),
     'gpt-6.1-sol': (2, .1, 2.5, 10),
+    'gpt-6.1-terra': (1, .05, 1.25, 5),
     'gpt-6-sol': (2, .2, 2.5, 10),
     'gpt-6-astra': (10, 1, 12.5, 50),
     'gpt-6-luna': (.1, .01, .125, .5),
 }
 LONG_CONTEXT = {'gpt-5.4', 'gpt-5.4-pro', 'gpt-5.5', 'gpt-5.5-pro',
                 'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna',
-                'gpt-6.1-sol', 'gpt-6-sol', 'gpt-6-astra', 'gpt-6-luna'}
+                'gpt-6.1-sol', 'gpt-6.1-terra', 'gpt-6-sol', 'gpt-6-astra', 'gpt-6-luna'}
 FAST_MULTIPLIERS = {'gpt-5.4': 2, 'gpt-5.4-mini': 2, 'gpt-5.5': 2.5,
-                    'gpt-5.6-sol': 2, 'gpt-5.6-terra': 2, 'gpt-5.6-luna': 2, 'gpt-6-astra': 2}
+                    'gpt-5.6-sol': 2, 'gpt-5.6-terra': 2, 'gpt-5.6-luna': 2, 'gpt-6-astra': 2,
+                    'gpt-6.1-sol': 2, 'gpt-6.1-terra': 2, 'gpt-6-sol': 2, 'gpt-6-luna': 2}
+# Fast also applies above 272K for these (2x the long-context rate).
+LONG_FAST = {'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-6-astra',
+             'gpt-6.1-sol', 'gpt-6.1-terra', 'gpt-6-sol', 'gpt-6-luna'}
 HISTORICAL = {
     'gpt-5.6-sol': ('2026-08-21T00:00:00+00:00', (5, .5, 6.25, 30)),
     'gpt-5.6-terra': ('2026-07-30T00:00:00+00:00', (2.5, .25, 3.125, 15)),
@@ -108,7 +113,7 @@ def price(request):
     multiplier = 1
     if request.priority:
         multiplier = FAST_MULTIPLIERS.get(model)
-        if multiplier is None or (inp > 272000 and model != 'gpt-6-astra'):
+        if multiplier is None or (inp > 272000 and model not in LONG_FAST):
             return None
     input_rate, cached_rate, write_rate, output_rate = rates
     cached_rate = input_rate if cached_rate is None else cached_rate
@@ -352,5 +357,5 @@ def summarize(home=None, today=None):
         'unpricedTokens': unknown, 'incomplete': bool(unknown or errors),
         'days': [{'date': date.isoformat(), 'usd': round(value['usd'], 6), 'tokens': value['tokens']} for date, value in days.items()],
         'basis': 'API-equivalent token estimate with request-level long-context, known Fast and historical rates. Local history only; excludes tools and unknown model prices.',
-        'pricingDate': '2026-10-15',
+        'pricingDate': '2026-10-27',
     }
